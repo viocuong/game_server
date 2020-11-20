@@ -6,6 +6,10 @@
 package server.controllers;
 
 import Models.com.*;
+import java.io.BufferedInputStream;
+import java.io.BufferedOutputStream;
+import java.io.BufferedReader;
+import java.io.BufferedWriter;
 import java.io.DataInputStream;
 import java.io.DataOutputStream;
 import java.io.IOException;
@@ -14,6 +18,10 @@ import java.io.ObjectOutputStream;
 import java.net.ServerSocket;
 import java.net.Socket;
 import java.sql.*;
+import java.util.HashMap;
+import java.util.HashSet;
+import java.util.Map;
+import java.util.Set;
 import java.util.logging.Level;
 import java.util.logging.Logger;
 /**
@@ -25,12 +33,28 @@ public class Controller {
     private ServerSocket myServer;
     private Socket clientSocket;
     private Connection con;
+    private Map<String,Info> players;//status 0=login fail, 1= waiting ,2= playing
+    
     public Controller(){
         con = getConnection("localhost", "btl", "root", "");
+        players = new HashMap<>();
         open();
         while(true){
             try {
-                new Listening(myServer.accept()).start();
+                Socket socket = myServer.accept();
+                Info info = null;
+                //System.out.println(socket.getInetAddress().getHostAddress());
+                if(!players.containsKey(socket.getInetAddress().getHostAddress())){
+                    info = new Info(socket,0);
+                    players.put(socket.getInetAddress().getHostAddress(),info);
+                }
+                else{
+                    info = players.get(socket.getInetAddress().getHostAddress());
+                    info.setSocket(socket);
+                    //System.out.println(info.getUser().getUserName());
+                   
+                }
+                new Listening(info).start();
             } catch (IOException ex) {
                 Logger.getLogger(Controller.class.getName()).log(Level.SEVERE, null, ex);
             }
@@ -39,53 +63,73 @@ public class Controller {
     
     private class Listening extends Thread{
         private Socket clientSocket;
+        private DataInputStream dis;
+        private BufferedWriter bw;
         private ObjectInputStream ois;
         private ObjectOutputStream oos;
-        public Listening(Socket s){
+        private Info info;
+        public Listening(Info info){
             try {
-                System.out.println("ket noi thanh cong");
-                this.clientSocket = s;
-                ois = new ObjectInputStream(s.getInputStream());
-                oos = new ObjectOutputStream(s.getOutputStream());
+                
+                this.info = info;
+                
+                //System.out.println(info.getUser().getUserName());
+                //System.out.println("ket noi thanh cong");
+                this.clientSocket = info.getSocket();
+                ois = new ObjectInputStream(clientSocket.getInputStream());
+                oos = new ObjectOutputStream(clientSocket.getOutputStream());
             } catch (IOException ex) {
                 Logger.getLogger(Controller.class.getName()).log(Level.SEVERE, null, ex);
             }
-            
         }
         @Override
         public void run() {
             try {
-               
-                Request request =(Request) ois.readObject();
-                
-                if(request.getRequestName().equals("login")){
-                    User user = (User) request.getObject();
-                    String datasend = "Thất bại";
-                    if(checkUser(user)) datasend = "thanh cong";
-                    oos.writeObject(datasend);
-                }
-                if(request.getRequestName().equals("getUserOnline")){
-                    System.out.println("10 thang dang online");
+                Object o;
+                while( clientSocket.isConnected() &&(o = ois.readObject())!=null ){
+                   
+                    //Object o  = ois.readObject();
+                    Request request = null;
+                    if(o instanceof Request){
+                        request = (Request)o;
+                        //System.out.println(request.getRequestName());
+                        if(request.getRequestName().equals("login")){
+                            proceedLogin(request);
+                        }
+                        else if(request.getRequestName().equals("getUserOnline")){
+                            System.out.println("hello");
+                            for(Map.Entry<String, Info> player : players.entrySet()){
+                                if(player.getValue().getStatus()!=0) System.out.println(player.getKey() +" "+ player.getValue().getStatus() +" "+player.getValue().getUser().getUserName());
+                            }
+                        }
+                    }
                 }
                 
             } catch (Exception ex) {
-               ex.printStackTrace();
-            }finally{
                 try {
                     clientSocket.close();
-                } catch (IOException ex) {
-                    Logger.getLogger(Controller.class.getName()).log(Level.SEVERE, null, ex);
+                    //ex.printStackTrace();
+                } catch (IOException ex1) {
+                    Logger.getLogger(Controller.class.getName()).log(Level.SEVERE, null, ex1);
                 }
-                System.out.println("client "+clientSocket.getInetAddress().getHostAddress()+" da dong");
             }
         }
-        
-    }
-    public void listening(){
-        User user = receiveUser();
-        String ans = "that bai";
-        if(checkUser(user)) ans = "thanh cong";
-        send(ans);
+        public void proceedLogin(Request request){
+            User user = (User) request.getObject();
+            String datasend = "Thất bại";
+            if(checkUser(user)){
+                datasend = "thanh cong";
+                info.setUserName(user);
+                info.setStatus(1);
+                //System.out.println(info.getStatus());
+                //System.out.println(info.getUser().getUserName());
+            }
+            try {
+                oos.writeObject(datasend);
+            } catch (IOException ex) {
+                Logger.getLogger(Controller.class.getName()).log(Level.SEVERE, null, ex);
+            }
+        }
     }
     public void send(String s){
         try {
@@ -113,7 +157,6 @@ public class Controller {
             ex.printStackTrace();
         }
         return res;
-        
     }
     public boolean checkUser(User user){
         String sql = "select * from tbl_user where userName=? and passWord=?";
