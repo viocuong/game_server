@@ -18,6 +18,7 @@ import java.io.ObjectOutputStream;
 import java.net.ServerSocket;
 import java.net.Socket;
 import java.sql.*;
+import java.util.ArrayList;
 import java.util.HashMap;
 import java.util.HashSet;
 import java.util.Map;
@@ -33,11 +34,13 @@ public class Controller {
     private ServerSocket myServer;
     private Socket clientSocket;
     private Connection con;
-    private Map<String,Info> players;//status 0=login fail, 1= waiting ,2= playing
+    private Map<String,Info> listPlayerSocket;//status 0=login fail, 1= waiting ,2= playing
+    private Map<String, Pair<User,Integer>> players;
     
     public Controller(){
         con = getConnection("localhost", "btl", "root", "");
         players = new HashMap<>();
+        listPlayerSocket = new HashMap<>();
         open();
         while(true){
             try {
@@ -46,10 +49,11 @@ public class Controller {
                 //System.out.println(socket.getInetAddress().getHostAddress());
                 if(!players.containsKey(socket.getInetAddress().getHostAddress())){
                     info = new Info(socket,0);
-                    players.put(socket.getInetAddress().getHostAddress(),info);
+                    listPlayerSocket.put(socket.getInetAddress().getHostAddress(),info);
                 }
                 else{
-                    info = players.get(socket.getInetAddress().getHostAddress());
+                    info = listPlayerSocket.get(socket.getInetAddress().getHostAddress());
+                    // Khi dang nhap sai socket se bi dong => set socket moi
                     info.setSocket(socket);
                     //System.out.println(info.getUser().getUserName());
                    
@@ -63,8 +67,6 @@ public class Controller {
     
     private class Listening extends Thread{
         private Socket clientSocket;
-        private DataInputStream dis;
-        private BufferedWriter bw;
         private ObjectInputStream ois;
         private ObjectOutputStream oos;
         private Info info;
@@ -96,17 +98,18 @@ public class Controller {
                         if(request.getRequestName().equals("login")){
                             proceedLogin(request);
                         }
-                        else if(request.getRequestName().equals("getUserOnline")){
-                            System.out.println("hello");
-                            for(Map.Entry<String, Info> player : players.entrySet()){
-                                if(player.getValue().getStatus()!=0) System.out.println(player.getKey() +" "+ player.getValue().getStatus() +" "+player.getValue().getUser().getUserName());
-                            }
+                        else if(request.getRequestName().equals("getListPlayer")){
+//                            for(Map.Entry<String, Info> player : players.entrySet()){
+//                                if(player.getValue().getStatus()!=0) System.out.println(player.getKey() +" "+ player.getValue().getStatus() +" "+player.getValue().getUser().getUserName());
+//                            }
+                            sendListPlayer();
                         }
                     }
                 }
                 
             } catch (Exception ex) {
                 try {
+                    // khi readObject = null da doc het => dong ket noi
                     clientSocket.close();
                     //ex.printStackTrace();
                 } catch (IOException ex1) {
@@ -114,11 +117,13 @@ public class Controller {
                 }
             }
         }
+        
         public void proceedLogin(Request request){
+            
             User user = (User) request.getObject();
-            String datasend = "Thất bại";
+            String datasend = "fail";
             if(checkUser(user)){
-                datasend = "thanh cong";
+                datasend = "success";
                 info.setUserName(user);
                 info.setStatus(1);
                 //System.out.println(info.getStatus());
@@ -130,7 +135,24 @@ public class Controller {
                 Logger.getLogger(Controller.class.getName()).log(Level.SEVERE, null, ex);
             }
         }
+        public void sendListPlayer(){
+            for(Map.Entry<String,Info> player : listPlayerSocket.entrySet()){
+                if(!players.containsKey(player.getKey())){
+                    players.put(player.getKey(), new Pair(player.getValue().getUser(),player.getValue().getStatus()));
+                }
+            }
+            Map<String, Pair<User, Integer>> listPlayer = players;
+            try {
+                oos.writeObject(listPlayer);
+            } catch (IOException ex) {
+                Logger.getLogger(Controller.class.getName()).log(Level.SEVERE, null, ex);
+            }
+        
+            
+        }
+        
     }
+    
     public void send(String s){
         try {
             DataOutputStream dis = new DataOutputStream(clientSocket.getOutputStream());
