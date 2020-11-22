@@ -36,6 +36,7 @@ public class Controller {
     private Connection con;
     private Map<String,Info> listPlayerSocket;//status 0=login fail, 1= waiting ,2= playing
     private Map<String, Pair<User,Integer>> players;
+    private ArrayList<User> ranks;
     
     public Controller(){
         con = getConnection("localhost", "btl", "root", "");
@@ -64,7 +65,6 @@ public class Controller {
             }
         }
     }
-    
     private class Listening extends Thread{
         private Socket clientSocket;
         private ObjectInputStream ois;
@@ -117,7 +117,6 @@ public class Controller {
                 }
             }
         }
-        
         public void proceedLogin(Request request){
             
             User user = (User) request.getObject();
@@ -139,6 +138,7 @@ public class Controller {
             for(Map.Entry<String,Info> player : listPlayerSocket.entrySet()){
                 if(!players.containsKey(player.getKey())){
                     players.put(player.getKey(), new Pair(player.getValue().getUser(),player.getValue().getStatus()));
+                    System.out.println(player.getKey()+ " "+player.getValue().getStatus());
                 }
             }
             Map<String, Pair<User, Integer>> listPlayer = players;
@@ -146,13 +146,9 @@ public class Controller {
                 oos.writeObject(listPlayer);
             } catch (IOException ex) {
                 Logger.getLogger(Controller.class.getName()).log(Level.SEVERE, null, ex);
-            }
-        
-            
-        }
-        
+            }   
+        }  
     }
-    
     public void send(String s){
         try {
             DataOutputStream dis = new DataOutputStream(clientSocket.getOutputStream());
@@ -216,5 +212,6 @@ public class Controller {
         }
         return res;
     }
+    
     
 }
