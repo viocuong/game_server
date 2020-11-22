@@ -15,7 +15,6 @@ import server.controllers.Controller;
 public class serverRun {
     public static void main(String[] args) {
         Controller c = new Controller();
-        
     }
     
 }

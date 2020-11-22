@@ -122,14 +122,25 @@ public class Controller {
             User user = (User) request.getObject();
             String datasend = "fail";
             if(checkUser(user)){
+                System.out.println(user.getScore());
                 datasend = "success";
+                
                 info.setUserName(user);
                 info.setStatus(1);
                 //System.out.println(info.getStatus());
                 //System.out.println(info.getUser().getUserName());
             }
             try {
+                
                 oos.writeObject(datasend);
+                sendAccount(user);
+            } catch (IOException ex) {
+                Logger.getLogger(Controller.class.getName()).log(Level.SEVERE, null, ex);
+            }
+        }
+        public void sendAccount(User user){
+            try {
+                oos.writeObject(user);
             } catch (IOException ex) {
                 Logger.getLogger(Controller.class.getName()).log(Level.SEVERE, null, ex);
             }
@@ -149,6 +160,9 @@ public class Controller {
             }   
         }  
     }
+    
+    //gui thong tin nguoi dung khi dang nhap thanh cong
+    
     public void send(String s){
         try {
             DataOutputStream dis = new DataOutputStream(clientSocket.getOutputStream());
@@ -177,13 +191,17 @@ public class Controller {
         return res;
     }
     public boolean checkUser(User user){
+        
         String sql = "select * from tbl_user where userName=? and passWord=?";
         try {
             PreparedStatement ps = con.prepareStatement(sql);
             ps.setString(1,user.getUserName());
             ps.setString(2,user.getPassWord());
             ResultSet rs = ps.executeQuery();
-            if(rs.next()) return true;
+            if(rs.next()){
+                user.setScore(rs.getInt("score"));
+                return true;
+            }
         } catch (SQLException ex) {
             Logger.getLogger(Controller.class.getName()).log(Level.SEVERE, null, ex);
         }
