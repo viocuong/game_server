@@ -48,7 +48,7 @@ public class Controller {
                 Socket socket = myServer.accept();
                 Info info = null;
                 //System.out.println(socket.getInetAddress().getHostAddress());
-                if(!players.containsKey(socket.getInetAddress().getHostAddress())){
+                if(!listPlayerSocket.containsKey(socket.getInetAddress().getHostAddress())){
                     info = new Info(socket,0);
                     listPlayerSocket.put(socket.getInetAddress().getHostAddress(),info);
                 }
@@ -124,8 +124,7 @@ public class Controller {
             if(checkUser(user)){
                 System.out.println(user.getScore());
                 datasend = "success";
-                
-                info.setUserName(user);
+                info.setUser(user);
                 info.setStatus(1);
                 //System.out.println(info.getStatus());
                 //System.out.println(info.getUser().getUserName());
