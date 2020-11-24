@@ -110,12 +110,14 @@ public class Controller {
                         case "login":
                             handleLogin(respond);
                             break;
-                        case "getListPlayerOnline":
+                        case "getListPlayer":
                             System.out.println("nhan get online");
                             sendListPlayer();
-                            break;               
-                    }
+                            break;
+                  }
                 }
+//                        
+                
             } catch (IOException ex) {
                 try {
                     clientSocket.close();
@@ -128,19 +130,27 @@ public class Controller {
             } 
         }
         public void handleLogin(Request respond){
-            Request request = null;
             User user = (User) respond.getObject();
             String datasend = "fail";
+            Request req = null;
             if(checkUser(user)){
+                System.out.println(user.getScore());
                 datasend = "success";
                 info.setUser(user);
                 info.setStatus(1);
-                request = new Request("login",(Object)user);
+                //System.out.println(info.getStatus());
+                //System.out.println(info.getUser().getUserName());
+                req = new Request("login", (Object)user);
             }
-            else request = new Request("login",(Object)"fail");
-            //oos.writeObject(datasend);
-            sendRequest(request);
-            //sendAccount(user);
+            else req = new Request("login",(Object)"fail");
+            sendRequest(req);
+        }
+        public void sendAccount(User user){
+            try {
+                oos.writeObject(user);
+            } catch (IOException ex) {
+                Logger.getLogger(Controller.class.getName()).log(Level.SEVERE, null, ex);
+            }
         }
         public void sendRequest(Request request){
             try {
@@ -158,7 +168,8 @@ public class Controller {
                 }
             }
             Map<String, Pair<User, Integer>> listPlayer = players;
-            sendRequest(new Request("sendListPlayerOnline",(Object)listPlayer));
+            
+            sendRequest(new Request("sendListPlayer",(Object)listPlayer));
             //oos.writeObject(listPlayer);
         }  
     }
