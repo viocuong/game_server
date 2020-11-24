@@ -37,12 +37,12 @@ public class Controller {
     private Map<String,Info> listPlayerSocket;//status 0=login fail, 1= waiting ,2= playing
     private Map<String, Pair<User,Integer>> players;
     private ArrayList<User> ranks;
-    
     public Controller(){
         con = getConnection("localhost", "btl", "root", "");
         players = new HashMap<>();
         listPlayerSocket = new HashMap<>();
         open();
+        //new updatePlayerOnline().start(); 
         while(true){
             try {
                 Socket socket = myServer.accept();
@@ -57,12 +57,32 @@ public class Controller {
                     // Khi dang nhap sai socket se bi dong => set socket moi
                     info.setSocket(socket);
                     //System.out.println(info.getUser().getUserName());
-                   
                 }
                 new Listening(info).start();
             } catch (IOException ex) {
                 Logger.getLogger(Controller.class.getName()).log(Level.SEVERE, null, ex);
             }
+        }
+    }
+    class updatePlayerOnline extends Thread{
+        public void run(){
+            while(true){
+                try {
+                    sleep(2000);
+                    updateOnline();
+                } catch (InterruptedException ex) {
+                    Logger.getLogger(Controller.class.getName()).log(Level.SEVERE, null, ex);
+                }
+            }
+        }
+        public void updateOnline(){
+            for(Map.Entry<String, Info> p: listPlayerSocket.entrySet()){
+                if(p.getValue().getSocket().isClosed()){
+                    listPlayerSocket.remove(p.getKey());
+                    break;
+                }
+            }
+            System.out.println(listPlayerSocket.size());
         }
     }
     private class Listening extends Thread{
@@ -72,14 +92,10 @@ public class Controller {
         private Info info;
         public Listening(Info info){
             try {
-                
                 this.info = info;
-                
-                //System.out.println(info.getUser().getUserName());
-                //System.out.println("ket noi thanh cong");
                 this.clientSocket = info.getSocket();
-                ois = new ObjectInputStream(clientSocket.getInputStream());
                 oos = new ObjectOutputStream(clientSocket.getOutputStream());
+                ois = new ObjectInputStream(this.clientSocket.getInputStream());
             } catch (IOException ex) {
                 Logger.getLogger(Controller.class.getName()).log(Level.SEVERE, null, ex);
             }
@@ -87,59 +103,49 @@ public class Controller {
         @Override
         public void run() {
             try {
-                Object o;
-                while( clientSocket.isConnected() &&(o = ois.readObject())!=null ){
-                   
-                    //Object o  = ois.readObject();
-                    Request request = null;
-                    if(o instanceof Request){
-                        request = (Request)o;
-                        //System.out.println(request.getRequestName());
-                        if(request.getRequestName().equals("login")){
-                            proceedLogin(request);
-                        }
-                        else if(request.getRequestName().equals("getListPlayer")){
-//                            for(Map.Entry<String, Info> player : players.entrySet()){
-//                                if(player.getValue().getStatus()!=0) System.out.println(player.getKey() +" "+ player.getValue().getStatus() +" "+player.getValue().getUser().getUserName());
-//                            }
+                Object o =null;
+                while(clientSocket.isConnected() && (o = (Request)ois.readObject())!=null){
+                    Request respond = (Request) o;
+                    switch(respond.getRequestName()){
+                        case "login":
+                            handleLogin(respond);
+                            break;
+                        case "getListPlayerOnline":
+                            System.out.println("nhan get online");
                             sendListPlayer();
-                        }
+                            break;               
                     }
                 }
-                
-            } catch (Exception ex) {
+            } catch (IOException ex) {
                 try {
-                    // khi readObject = null da doc het => dong ket noi
                     clientSocket.close();
-                    //ex.printStackTrace();
+//Logger.getLogger(Controller.class.getName()).log(Level.SEVERE, null, ex);
                 } catch (IOException ex1) {
                     Logger.getLogger(Controller.class.getName()).log(Level.SEVERE, null, ex1);
                 }
-            }
+            } catch (ClassNotFoundException ex) {
+                Logger.getLogger(Controller.class.getName()).log(Level.SEVERE, null, ex);
+            } 
         }
-        public void proceedLogin(Request request){
-            
-            User user = (User) request.getObject();
+        public void handleLogin(Request respond){
+            Request request = null;
+            User user = (User) respond.getObject();
             String datasend = "fail";
             if(checkUser(user)){
-                System.out.println(user.getScore());
                 datasend = "success";
                 info.setUser(user);
                 info.setStatus(1);
-                //System.out.println(info.getStatus());
-                //System.out.println(info.getUser().getUserName());
+                request = new Request("login",(Object)user);
             }
-            try {
-                
-                oos.writeObject(datasend);
-                sendAccount(user);
-            } catch (IOException ex) {
-                Logger.getLogger(Controller.class.getName()).log(Level.SEVERE, null, ex);
-            }
+            else request = new Request("login",(Object)"fail");
+            //oos.writeObject(datasend);
+            sendRequest(request);
+            //sendAccount(user);
         }
-        public void sendAccount(User user){
+        public void sendRequest(Request request){
             try {
-                oos.writeObject(user);
+                oos.writeObject(request);
+                oos.flush();
             } catch (IOException ex) {
                 Logger.getLogger(Controller.class.getName()).log(Level.SEVERE, null, ex);
             }
@@ -152,42 +158,18 @@ public class Controller {
                 }
             }
             Map<String, Pair<User, Integer>> listPlayer = players;
-            try {
-                oos.writeObject(listPlayer);
-            } catch (IOException ex) {
-                Logger.getLogger(Controller.class.getName()).log(Level.SEVERE, null, ex);
-            }   
+            sendRequest(new Request("sendListPlayerOnline",(Object)listPlayer));
+            //oos.writeObject(listPlayer);
         }  
     }
     
     //gui thong tin nguoi dung khi dang nhap thanh cong
-    
-    public void send(String s){
-        try {
-            DataOutputStream dis = new DataOutputStream(clientSocket.getOutputStream());
-            dis.writeUTF(s);
-        } catch (IOException ex) {
-            Logger.getLogger(Controller.class.getName()).log(Level.SEVERE, null, ex);
-        }
-    }
     public void open(){
         try {
             myServer = new ServerSocket(port);
         } catch (Exception ex) {
             ex.printStackTrace();
         }
-    }
-    public User receiveUser(){
-        User res =null;
-        try {
-            clientSocket = myServer.accept();
-            System.out.println(clientSocket.getInetAddress().getHostAddress());
-            ObjectInputStream ois = new ObjectInputStream(clientSocket.getInputStream());
-            res=(User)ois.readObject();
-        } catch (Exception ex) {
-            ex.printStackTrace();
-        }
-        return res;
     }
     public boolean checkUser(User user){
         
