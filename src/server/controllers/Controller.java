@@ -4,7 +4,7 @@
  * and open the template in the editor.
  */
 package server.controllers;
-
+import server.controllers.*;
 import Models.com.*;
 import java.io.BufferedInputStream;
 import java.io.BufferedOutputStream;
@@ -42,7 +42,8 @@ public class Controller {
         players = new HashMap<>();
         listPlayerSocket = new HashMap<>();
         open();
-        //new updatePlayerOnline().start(); 
+        updatePlayerOnline threadUpdate = new updatePlayerOnline(this.listPlayerSocket);
+        threadUpdate.start();
         while(true){
             try {
                 Socket socket = myServer.accept();
@@ -58,122 +59,14 @@ public class Controller {
                     info.setSocket(socket);
                     //System.out.println(info.getUser().getUserName());
                 }
-                new Listening(info).start();
+                new ThreadServerListen(info, con, listPlayerSocket, players).start();
             } catch (IOException ex) {
                 Logger.getLogger(Controller.class.getName()).log(Level.SEVERE, null, ex);
             }
         }
-    }
-    class updatePlayerOnline extends Thread{
-        public void run(){
-            while(true){
-                try {
-                    sleep(2000);
-                    updateOnline();
-                } catch (InterruptedException ex) {
-                    Logger.getLogger(Controller.class.getName()).log(Level.SEVERE, null, ex);
-                }
-            }
-        }
-        public void updateOnline(){
-            for(Map.Entry<String, Info> p: listPlayerSocket.entrySet()){
-                if(p.getValue().getSocket().isClosed()){
-                    listPlayerSocket.remove(p.getKey());
-                    break;
-                }
-            }
-            System.out.println(listPlayerSocket.size());
-        }
-    }
-    private class Listening extends Thread{
-        private Socket clientSocket;
-        private ObjectInputStream ois;
-        private ObjectOutputStream oos;
-        private Info info;
-        public Listening(Info info){
-            try {
-                this.info = info;
-                this.clientSocket = info.getSocket();
-                oos = new ObjectOutputStream(clientSocket.getOutputStream());
-                ois = new ObjectInputStream(this.clientSocket.getInputStream());
-            } catch (IOException ex) {
-                Logger.getLogger(Controller.class.getName()).log(Level.SEVERE, null, ex);
-            }
-        }
-        @Override
-        public void run() {
-            try {
-                Object o =null;
-                while(clientSocket.isConnected() && (o = (Request)ois.readObject())!=null){
-                    Request respond = (Request) o;
-                    switch(respond.getRequestName()){
-                        case "login":
-                            handleLogin(respond);
-                            break;
-                        case "getListPlayer":
-                            System.out.println("nhan get online");
-                            sendListPlayer();
-                            break;
-                  }
-                }
-//                        
-                
-            } catch (IOException ex) {
-                try {
-                    clientSocket.close();
-//Logger.getLogger(Controller.class.getName()).log(Level.SEVERE, null, ex);
-                } catch (IOException ex1) {
-                    Logger.getLogger(Controller.class.getName()).log(Level.SEVERE, null, ex1);
-                }
-            } catch (ClassNotFoundException ex) {
-                Logger.getLogger(Controller.class.getName()).log(Level.SEVERE, null, ex);
-            } 
-        }
-        public void handleLogin(Request respond){
-            User user = (User) respond.getObject();
-            String datasend = "fail";
-            Request req = null;
-            if(checkUser(user)){
-                System.out.println(user.getScore());
-                datasend = "success";
-                info.setUser(user);
-                info.setStatus(1);
-                //System.out.println(info.getStatus());
-                //System.out.println(info.getUser().getUserName());
-                req = new Request("login", (Object)user);
-            }
-            else req = new Request("login",(Object)"fail");
-            sendRequest(req);
-        }
-        public void sendAccount(User user){
-            try {
-                oos.writeObject(user);
-            } catch (IOException ex) {
-                Logger.getLogger(Controller.class.getName()).log(Level.SEVERE, null, ex);
-            }
-        }
-        public void sendRequest(Request request){
-            try {
-                oos.writeObject(request);
-                oos.flush();
-            } catch (IOException ex) {
-                Logger.getLogger(Controller.class.getName()).log(Level.SEVERE, null, ex);
-            }
-        }
-        public void sendListPlayer(){
-            for(Map.Entry<String,Info> player : listPlayerSocket.entrySet()){
-                if(!players.containsKey(player.getKey())){
-                    players.put(player.getKey(), new Pair(player.getValue().getUser(),player.getValue().getStatus()));
-                    System.out.println(player.getKey()+ " "+player.getValue().getStatus());
-                }
-            }
-            Map<String, Pair<User, Integer>> listPlayer = players;
-            
-            sendRequest(new Request("sendListPlayer",(Object)listPlayer));
-            //oos.writeObject(listPlayer);
-        }  
     }
     
+
     //gui thong tin nguoi dung khi dang nhap thanh cong
     public void open(){
         try {
@@ -182,24 +75,7 @@ public class Controller {
             ex.printStackTrace();
         }
     }
-    public boolean checkUser(User user){
-        
-        String sql = "select * from tbl_user where userName=? and passWord=?";
-        try {
-            PreparedStatement ps = con.prepareStatement(sql);
-            ps.setString(1,user.getUserName());
-            ps.setString(2,user.getPassWord());
-            ResultSet rs = ps.executeQuery();
-            if(rs.next()){
-                user.setScore(rs.getInt("score"));
-                return true;
-            }
-        } catch (SQLException ex) {
-            Logger.getLogger(Controller.class.getName()).log(Level.SEVERE, null, ex);
-        }
-        return false;
-        
-    }
+    
     public void close(){
         try {
             myServer.close();
