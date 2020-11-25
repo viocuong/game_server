@@ -27,7 +27,7 @@ public class ThreadServerListen extends Thread{
     private Socket clientSocket;
     private ObjectInputStream ois;
     private ObjectOutputStream oos;
-    private Info info;
+    public Info info;
     private Connection con;
     private Map<String, Info> listPlayerSocket;
     private Map<String , Pair<User, Integer>> players;
@@ -39,8 +39,10 @@ public class ThreadServerListen extends Thread{
             this.con = con;
             this.info = info;
             this.clientSocket = info.getSocket();
-            oos = new ObjectOutputStream(clientSocket.getOutputStream());
+            //oos = new ObjectOutputStream(clientSocket.getOutputStream());
+            this.oos = info.oos;
             ois = new ObjectInputStream(this.clientSocket.getInputStream());
+            
         } catch (IOException ex) {
             Logger.getLogger(Controller.class.getName()).log(Level.SEVERE, null, ex);
         }
@@ -58,11 +60,11 @@ public class ThreadServerListen extends Thread{
                         sendListPlayer();
                         break;
                     case "match":
+                        
                         forwardInvite(respond);
                         break;
-                    case "sendInviteMatch":
-                        
-                        break;
+                    // nhận lời mời thách đấu từ user1
+                    
               }
             }
         } catch (IOException ex) {
@@ -78,38 +80,26 @@ public class ThreadServerListen extends Thread{
     }
     //Chuyển l ờithách đấu của user1 gửi đến User2
     public void forwardInvite(Request res){
-        String ip = (String) res.getObject();
-        try{
-            for(Map.Entry<String , Info> s : this.listPlayerSocket.entrySet()){
-                if(ip.equals(s.getKey())){
-                    System.out.println(ip);
-                    //sendInviteToClient(s.getValue());
-                    ObjectOutputStream oos = new ObjectOutputStream(s.getValue().getSocket().getOutputStream());
-                    Request req = new Request("challange",(Object)ip);
-                    oos.writeObject(req);
-                    oos.flush();
-                    break;
-                }
-            }
-        }catch(IOException ex){
-            ex.printStackTrace();
-        }
-    }
-    public void sendInviteToClient(Info info){
-        Request req = new Request("senAcceptInvite",(Object)this.info);
-        sendRequest(req);
-    }
-    public void sendOtherSocket(Socket socket){
         try {
-            ObjectOutputStream oos = new ObjectOutputStream(socket.getOutputStream());
-            Request req = new Request("sendInviteMatch",(Object)this.info);
-            oos.writeObject(req);
-            oos.flush();
+            String ip = (String) res.getObject();
+            
+            System.out.println("nhan loi thach dau");
+            //System.out.println("ip cua user 2 la "+s.getValue().getSocket().getInetAddress().getHostAddress());
+            //sendInviteToClient(s.getValue());
+            //TÌm thấy User2 gửi cho user 2 yêu cầu xác nhận lời mời thách đấu
+            
+            Request req = new Request("challange",(Object)ip);
+            //System.out.println("send to "+s.getValue().getSocket().getInetAddress().getHostAddress());
+            listPlayerSocket.get(ip).oos.writeObject(req);
+            //s.getValue().oos.flush();
         } catch (IOException ex) {
             Logger.getLogger(ThreadServerListen.class.getName()).log(Level.SEVERE, null, ex);
         }
+                   
+            
         
     }
+    
     public void handleLogin(Request respond){
         User user = (User) respond.getObject();
         String datasend = "fail";
@@ -129,6 +119,7 @@ public class ThreadServerListen extends Thread{
     }
     public void sendAccount(User user){
         try {
+            
             oos.writeObject(user);
         } catch (IOException ex) {
             Logger.getLogger(Controller.class.getName()).log(Level.SEVERE, null, ex);
@@ -137,7 +128,7 @@ public class ThreadServerListen extends Thread{
     public void sendRequest(Request request){
         try {
             oos.writeObject(request);
-            oos.flush();
+            //oos.flush();
         } catch (IOException ex) {
             Logger.getLogger(Controller.class.getName()).log(Level.SEVERE, null, ex);
         }

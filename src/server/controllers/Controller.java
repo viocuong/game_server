@@ -43,6 +43,7 @@ public class Controller {
         listPlayerSocket = new HashMap<>();
         open();
         updatePlayerOnline threadUpdate = new updatePlayerOnline(this.listPlayerSocket);
+        threadUpdate.setDaemon(true);
         threadUpdate.start();
         while(true){
             try {
@@ -51,22 +52,22 @@ public class Controller {
                 //System.out.println(socket.getInetAddress().getHostAddress());
                 if(!listPlayerSocket.containsKey(socket.getInetAddress().getHostAddress())){
                     info = new Info(socket,0);
+                    info.oos = new ObjectOutputStream(socket.getOutputStream());
                     listPlayerSocket.put(socket.getInetAddress().getHostAddress(),info);
                 }
-                else{
-                    info = listPlayerSocket.get(socket.getInetAddress().getHostAddress());
-                    // Khi dang nhap sai socket se bi dong => set socket moi
-                    info.setSocket(socket);
-                    //System.out.println(info.getUser().getUserName());
-                }
+//                else{
+//                    info = listPlayerSocket.get(socket.getInetAddress().getHostAddress());
+//                    // Khi dang nhap sai socket se bi dong => set socket moi
+//                    info.setSocket(socket);
+//                    info.oos = new ObjectOutputStream(socket.getOutputStream());
+//                    //System.out.println(info.getUser().getUserName());
+//                }
                 new ThreadServerListen(info, con, listPlayerSocket, players).start();
             } catch (IOException ex) {
                 Logger.getLogger(Controller.class.getName()).log(Level.SEVERE, null, ex);
             }
         }
     }
-    
-
     //gui thong tin nguoi dung khi dang nhap thanh cong
     public void open(){
         try {
