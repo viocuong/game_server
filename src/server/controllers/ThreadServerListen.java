@@ -96,7 +96,9 @@ public class ThreadServerListen extends Thread{
         try {
             String ip = (String) res.getObject();
             System.out.println("nhan loi thach dau");
-            Request req = new Request("challange",(Object)ip);
+            User user = listPlayerSocket.get(ip).getUser();
+            user.setIp(ip);
+            Request req = new Request("challange",(Object)user);
             //System.out.println("send to "+s.getValue().getSocket().getInetAddress().getHostAddress());
             listPlayerSocket.get(ip).oos.writeObject(req);
             //s.getValue().oos.flush();
