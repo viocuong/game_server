@@ -24,7 +24,7 @@ public class updatePlayerOnline extends Thread{
     public void run(){
             while(true){
                 try {
-                    System.out.println(listPlayer.size());
+                    
                     sleep(2000);
                     updateOnline();
                 } catch (InterruptedException ex) {

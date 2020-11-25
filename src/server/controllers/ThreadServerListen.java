@@ -25,12 +25,13 @@ import java.util.logging.Logger;
  */
 public class ThreadServerListen extends Thread{
     private Socket clientSocket;
-        private ObjectInputStream ois;
-        private ObjectOutputStream oos;
-        private Info info;
-        private Connection con;
-        private Map<String, Info> listPlayerSocket;
-        private Map<String , Pair<User, Integer>> players;
+    private ObjectInputStream ois;
+    private ObjectOutputStream oos;
+    private Info info;
+    private Connection con;
+    private Map<String, Info> listPlayerSocket;
+    private Map<String , Pair<User, Integer>> players;
+    private User user;
     public ThreadServerListen(Info info, Connection con, Map<String, Info> l, Map<String, Pair<User, Integer>> players){
         try {
             this.players = players;
@@ -54,8 +55,13 @@ public class ThreadServerListen extends Thread{
                         handleLogin(respond);
                         break;
                     case "getListPlayer":
-                        System.out.println("nhan get online");
                         sendListPlayer();
+                        break;
+                    case "match":
+                        forwardInvite(respond);
+                        break;
+                    case "sendInviteMatch":
+                        
                         break;
               }
             }
@@ -70,18 +76,53 @@ public class ThreadServerListen extends Thread{
             Logger.getLogger(Controller.class.getName()).log(Level.SEVERE, null, ex);
         }
     }
+    //Chuyển l ờithách đấu của user1 gửi đến User2
+    public void forwardInvite(Request res){
+        String ip = (String) res.getObject();
+        try{
+            for(Map.Entry<String , Info> s : this.listPlayerSocket.entrySet()){
+                if(ip.equals(s.getKey())){
+                    System.out.println(ip);
+                    //sendInviteToClient(s.getValue());
+                    ObjectOutputStream oos = new ObjectOutputStream(s.getValue().getSocket().getOutputStream());
+                    Request req = new Request("challange",(Object)ip);
+                    oos.writeObject(req);
+                    oos.flush();
+                    break;
+                }
+            }
+        }catch(IOException ex){
+            ex.printStackTrace();
+        }
+    }
+    public void sendInviteToClient(Info info){
+        Request req = new Request("senAcceptInvite",(Object)this.info);
+        sendRequest(req);
+    }
+    public void sendOtherSocket(Socket socket){
+        try {
+            ObjectOutputStream oos = new ObjectOutputStream(socket.getOutputStream());
+            Request req = new Request("sendInviteMatch",(Object)this.info);
+            oos.writeObject(req);
+            oos.flush();
+        } catch (IOException ex) {
+            Logger.getLogger(ThreadServerListen.class.getName()).log(Level.SEVERE, null, ex);
+        }
+        
+    }
     public void handleLogin(Request respond){
         User user = (User) respond.getObject();
         String datasend = "fail";
         Request req = null;
         if(checkUser(user)){
-            System.out.println(user.getScore());
+            //System.out.println(user.getScore());
             datasend = "success";
+
+            user.setIp(info.getSocket().getInetAddress().getHostAddress());
+            this.user = user;
             info.setUser(user);
             info.setStatus(1);
-            //System.out.println(info.getStatus());
-            //System.out.println(info.getUser().getUserName());
-            req = new Request("login", (Object)user);
+            req = new Request("login", (Object)this.user);
         }
         else req = new Request("login",(Object)"fail");
         sendRequest(req);
@@ -115,7 +156,6 @@ public class ThreadServerListen extends Thread{
         //oos.writeObject(listPlayer);
     } 
     public boolean checkUser(User user){
-        
         String sql = "select * from tbl_user where userName=? and passWord=?";
         try {
             PreparedStatement ps = con.prepareStatement(sql);
