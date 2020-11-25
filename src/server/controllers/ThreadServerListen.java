@@ -63,14 +63,16 @@ public class ThreadServerListen extends Thread{
                         
                         forwardInvite(respond);
                         break;
-                    // nhận lời mời thách đấu từ user1
+                    case "refuse":
+                        sendRefuse(respond);
+                        break;
+                    
                     
               }
             }
         } catch (IOException ex) {
             try {
                 clientSocket.close();
-//Logger.getLogger(Controller.class.getName()).log(Level.SEVERE, null, ex);
             } catch (IOException ex1) {
                 Logger.getLogger(Controller.class.getName()).log(Level.SEVERE, null, ex1);
             }
@@ -78,16 +80,22 @@ public class ThreadServerListen extends Thread{
             Logger.getLogger(Controller.class.getName()).log(Level.SEVERE, null, ex);
         }
     }
+    //trả lại thông báo từ chối cho người mời
+    public void sendRefuse(Request res){
+        try {
+            String ip = (String)res.getObject();
+            
+            Request req = new Request("refuse",(Object)this.info.getUser().getUserName());
+            listPlayerSocket.get(ip).oos.writeObject(req);
+        } catch (IOException ex) {
+            Logger.getLogger(ThreadServerListen.class.getName()).log(Level.SEVERE, null, ex);
+        }
+    }
     //Chuyển l ờithách đấu của user1 gửi đến User2
     public void forwardInvite(Request res){
         try {
             String ip = (String) res.getObject();
-            
             System.out.println("nhan loi thach dau");
-            //System.out.println("ip cua user 2 la "+s.getValue().getSocket().getInetAddress().getHostAddress());
-            //sendInviteToClient(s.getValue());
-            //TÌm thấy User2 gửi cho user 2 yêu cầu xác nhận lời mời thách đấu
-            
             Request req = new Request("challange",(Object)ip);
             //System.out.println("send to "+s.getValue().getSocket().getInetAddress().getHostAddress());
             listPlayerSocket.get(ip).oos.writeObject(req);
