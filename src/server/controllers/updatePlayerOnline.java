@@ -16,7 +16,7 @@ import java.util.logging.Logger;
  * @author cuongnv
  */
 public class updatePlayerOnline extends Thread{
-    private Map<String, Info> listPlayer;
+    public Map<String, Info> listPlayer;
     public updatePlayerOnline(Map<String, Info> lp){
         this. listPlayer = lp;
     }
@@ -32,7 +32,7 @@ public class updatePlayerOnline extends Thread{
                 }
             }
         }
-        public void updateOnline(){
+        public synchronized  void updateOnline(){
             for(Map.Entry<String, Info> p: listPlayer.entrySet()){
                 if(p.getValue().getSocket().isClosed()){
                     listPlayer.remove(p.getKey());

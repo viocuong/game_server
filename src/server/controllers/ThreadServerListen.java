@@ -14,6 +14,7 @@ import java.io.ObjectInputStream;
 import java.io.ObjectOutputStream;
 import java.net.Socket;
 import java.sql.*;
+import java.util.HashMap;
 import java.util.Map;
 import java.util.logging.Level;
 import java.util.logging.Logger;
@@ -101,10 +102,11 @@ public class ThreadServerListen extends Thread{
         }
     }
     public void sendListPlayer(){
+        players.clear();
+        players= new HashMap<>();
         for(Map.Entry<String,Info> player : listPlayerSocket.entrySet()){
-            if(!players.containsKey(player.getKey())){
-                players.put(player.getKey(), new Pair(player.getValue().getUser(),player.getValue().getStatus()));
-                System.out.println(player.getKey()+ " "+player.getValue().getStatus());
+            if(player.getValue().getSocket().isConnected()){
+                players.put(player.getKey(),new Pair(player.getValue().getUser(),player.getValue().getStatus()));
             }
         }
         Map<String, Pair<User, Integer>> listPlayer = players;
