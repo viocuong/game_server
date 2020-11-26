@@ -55,13 +55,13 @@ public class Controller {
                     info.oos = new ObjectOutputStream(socket.getOutputStream());
                     listPlayerSocket.put(socket.getInetAddress().getHostAddress(),info);
                 }
-//                else{
-//                    info = listPlayerSocket.get(socket.getInetAddress().getHostAddress());
-//                    // Khi dang nhap sai socket se bi dong => set socket moi
-//                    info.setSocket(socket);
-//                    info.oos = new ObjectOutputStream(socket.getOutputStream());
-//                    //System.out.println(info.getUser().getUserName());
-//                }
+                else{
+                    info = listPlayerSocket.get(socket.getInetAddress().getHostAddress());
+                    // Khi dang nhap sai socket se bi dong => set socket moi
+                    info.setSocket(socket);
+                    info.oos = new ObjectOutputStream(socket.getOutputStream());
+                    //System.out.println(info.getUser().getUserName());
+                }
                 new ThreadServerListen(info, con, listPlayerSocket, players).start();
             } catch (IOException ex) {
                 Logger.getLogger(Controller.class.getName()).log(Level.SEVERE, null, ex);

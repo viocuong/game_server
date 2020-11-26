@@ -170,7 +170,7 @@ public class ThreadServerListen extends Thread{
             ps.setString(2,user.getPassWord());
             ResultSet rs = ps.executeQuery();
             if(rs.next()){
-                user.setScore(rs.getInt("score"));
+                user.setScore(rs.getFloat("score"));
                 return true;
             }
         } catch (SQLException ex) {

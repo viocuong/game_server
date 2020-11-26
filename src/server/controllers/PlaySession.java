@@ -25,16 +25,27 @@ public class PlaySession extends Thread{
         this.info1 = i1;
         this.info2 = i2;
         this.con = con;
-        
+        updateStatusPlaying();
     }
     public void run(){
-        createQuestion(info1);
-        createQuestion(info2);
+        //tao cau 10 cau hoi ngau nhien gui cho user1 va user2
+        
+        createQuestion();
 //        while(true){
 //            
 //        }
     }
-    public void createQuestion(Info info1){
+    //Cập nhật trạng thái online
+    public void updateStatusOnline(){
+        this.info1.setStatus(1);
+        this.info2.setStatus(1);
+    }
+    // cập nhật trạng thái bận cho 2 người chơi;
+    public void updateStatusPlaying(){
+        this.info1.setStatus(2);
+        this.info2.setStatus(2);
+    }
+    public void createQuestion(){
         ArrayList<Question> questions = new ArrayList<>();
         try {
             String sql ="select * from tbl_question ORDER BY RAND() LIMIT 10";
@@ -53,9 +64,9 @@ public class PlaySession extends Thread{
                 questions.add(q);
                 //questions.add(new Question(rs.getString(""), listans, NORM_PRIORITY))
             }
-            info1.oos.writeObject(new Request("sendListQuestion",(Object)questions));
             
-            
+            info1.oos.writeObject(new Request("sendListQuestion",(Object)questions,(Object)info2.getUser()));
+            info2.oos.writeObject(new Request("sendListQuestion",(Object)questions,(Object)info1.getUser()));
         } catch (SQLException ex) {
             Logger.getLogger(PlaySession.class.getName()).log(Level.SEVERE, null, ex);
         } catch (IOException ex) {
