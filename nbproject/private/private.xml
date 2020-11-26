@@ -6,6 +6,8 @@
             <file>file:/home/cuongnv/projects/gameserver/src/server/controllers/ThreadServerListen.java</file>
             <file>file:/home/cuongnv/projects/gameserver/src/server/controllers/Controller.java</file>
             <file>file:/home/cuongnv/projects/gameserver/src/server/serverRun.java</file>
+            <file>file:/home/cuongnv/projects/gameserver/src/server/controllers/PlaySession.java</file>
+            <file>file:/home/cuongnv/projects/gameserver/src/server/controllers/updatePlayerOnline.java</file>
         </group>
     </open-files>
 </project-private>

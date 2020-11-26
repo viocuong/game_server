@@ -66,8 +66,10 @@ public class ThreadServerListen extends Thread{
                     case "refuse":
                         sendRefuse(respond);
                         break;
-                    
-                    
+                    case "acceptChallange":
+                        createSession((String)respond.getObject());
+                        break;
+
               }
             }
         } catch (IOException ex) {
@@ -79,6 +81,10 @@ public class ThreadServerListen extends Thread{
         } catch (ClassNotFoundException ex) {
             Logger.getLogger(Controller.class.getName()).log(Level.SEVERE, null, ex);
         }
+    }
+    public void createSession(String ip){
+        Info user1 = listPlayerSocket.get(ip);
+        new PlaySession(user1, this.info,this.con).start();
     }
     //trả lại thông báo từ chối cho người mời
     public void sendRefuse(Request res){
