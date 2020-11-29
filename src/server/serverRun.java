@@ -7,14 +7,14 @@ package server;
 
 import server.controllers.Controller;
 
-
 /**
  *
  * @author cuongnv
  */
 public class serverRun {
+
     public static void main(String[] args) {
         Controller c = new Controller();
     }
-    
+
 }

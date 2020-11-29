@@ -115,86 +115,112 @@ public class ThreadServerListen extends Thread {
         }
     }
 
+    public void resetCouple(User u1, User u2) {
+
+        for (CouplePlayer cp : listPlaySession) {
+            if (cp.getUser1().getUser().getUserName().equals(u1.getUserName()) && cp.getUser2().getUser().getUserName().equals(u2.getUserName())) {
+                listPlaySession.remove(cp);
+                break;
+            }
+        }
+    }
+
     //luu ket qua vao DB va send ket qua cho nguoi choi
     public void sendResult(CouplePlayer c) {
         try {
             Result user1 = new Result(c.getUser1().getUser(), c.getNumCorrect1(), c.getTime1(), c.getUser2().getUser());
             Result user2 = new Result(c.getUser2().getUser(), c.getNumcorrect2(), c.getTime2(), c.getUser1().getUser());
             boolean u1 = false, u2 = false;
-            if(user1.getNumCorrect()> user2.getNumCorrect()) u1=true;
-            else if(user1.getNumCorrect()<user2.getNumCorrect()) u2=true;
-            else{
+            if (user1.getNumCorrect() > user2.getNumCorrect()) {
+                u1 = true;
+            } else if (user1.getNumCorrect() < user2.getNumCorrect()) {
+                u2 = true;
+            } else {
                 // Bang diem nhau nhau xet theo time
-                if(user1.getTime()< user2.getTime()) u1 =true;
-                else if(user1.getTime()>user2.getTime()) u2 = true;
-            }   user1.setWin(u1);
+                if (user1.getTime() < user2.getTime()) {
+                    u1 = true;
+                } else if (user1.getTime() > user2.getTime()) {
+                    u2 = true;
+                }
+            }
+            user1.setWin(u1);
             user2.setWin(u2);
             boolean hoa = false; // hòa, do ngu tiếng anh : )
-            if(u1 == u2) hoa = true;
+            if (u1 == u2) {
+                hoa = true;
+            }
             user1.setIsEquals(hoa);
             user2.setIsEquals(hoa);
-            updateResultIntoDatabase(user1,user2.getUser().getScore());
+            updateResultIntoDatabase(user1, user2.getUser().getScore());
             updateResultIntoDatabase(user2, user1.getUser().getScore());
             //Ghi log, A thắng B
-            if(hoa){
-                updateLog(user1.getUser(), user2.getUser(),user1.getTime(), user1.getNumCorrect(), 1);
+            if (hoa) {
+                updateLog(user1.getUser(), user2.getUser(), user1.getTime(), user1.getNumCorrect(), 1);
+            } else if (u1) {
+                updateLog(user1.getUser(), user2.getUser(), user1.getTime(), user1.getNumCorrect(), 0);
+            } else {
+                updateLog(user2.getUser(), user1.getUser(), user2.getTime(), user2.getNumCorrect(), 0);
             }
-            else if(u1){
-                updateLog(user1.getUser(), user2.getUser(), user1.getTime(),user1.getNumCorrect(), 0);
-            }
-            else updateLog(user2.getUser(), user1.getUser(), user2.getTime(), user2.getNumCorrect(), 0);
             //Gửi kết quả cho người chơi
-            Request req1 = new Request("result",(Object)user1);
+            Request req1 = new Request("result", (Object) user1);
             c.getUser1().oos.writeObject(req1);
-            
-            Request req2 = new Request("result",(Object)user2);
+
+            Request req2 = new Request("result", (Object) user2);
             c.getUser2().oos.writeObject(req2);
+            resetCouple(user1.getUser(), user2.getUser());// reset lai phien choi, khi choi xong
         } catch (IOException ex) {
             Logger.getLogger(ThreadServerListen.class.getName()).log(Level.SEVERE, null, ex);
         }
-        
     }
-    public void updateLog(User win, User lose, int time, int num, int is_equals){
+    public void updateStatusOnline(User user1, User user2){
+        for(Map.Entry<String, Info> player: listPlayerSocket.entrySet()){
+            if(user1.getIp().equals(player.getKey()) || user2.getIp().equals(player.getKey())){
+                listPlayerSocket.remove(player);
+                break;
+            }
+        }
+    }
+    public void updateLog(User win, User lose, int time, int num, int is_equals) {
         try {
             String sql = "insert into tbl_log(userNameA, userNameB, time, numCorrect, is_equals) values(?,?,?,?,?)";
             PreparedStatement ps = this.con.prepareStatement(sql);
-            ps.setString(1,win.getUserName());
-            ps.setString(2,lose.getUserName());
-            ps.setInt(3,time);
-            ps.setInt(4,num);
+            ps.setString(1, win.getUserName());
+            ps.setString(2, lose.getUserName());
+            ps.setInt(3, time);
+            ps.setInt(4, num);
             ps.setInt(5, is_equals);
             ps.execute();
         } catch (SQLException ex) {
             Logger.getLogger(ThreadServerListen.class.getName()).log(Level.SEVERE, null, ex);
         }
-        
     }
-    public void updateResultIntoDatabase(Result user, float totalScore2){
+
+    public void updateResultIntoDatabase(Result user, float totalScore2) {
         try {
             float score = user.getUser().getScore();
             int totalWinTime = getTotalWinTime(user.getUser());
             int numWin = getNumWin(user.getUser());
-            float totalCompetitorScore = getTotalCompetitorScore(user.getUser())+totalScore2;// tong diem cua cac doi thu da choi
-            int numMatches = getNumMatches(user.getUser())+1;
+            float totalCompetitorScore = getTotalCompetitorScore(user.getUser()) + totalScore2;// tong diem cua cac doi thu da choi
+            int numMatches = getNumMatches(user.getUser()) + 1;
             float averageTimeWin = getAverageTimeWin(user.getUser());
-            float averageCompetitor=0;
-            if(user.getIsEquals()) score+=0.5; // neu hoa +0.5
-            else if(user.getIsWin()){
-                score+=1;
+            float averageCompetitor = 0;
+            if (user.getIsEquals()) {
+                score += 0.5; // neu hoa +0.5
+            } else if (user.getIsWin()) {
+                score += 1;
                 // Thời gian kết thúc trong các trận thắng
-                totalWinTime+=user.getTime();
+                totalWinTime += user.getTime();
                 numWin++;
-                averageTimeWin = (float) (totalWinTime*1.0/numWin);
+                averageTimeWin = (float) (totalWinTime * 1.0 / numWin);
             }
-            averageCompetitor = totalCompetitorScore/numMatches;
-            
+            averageCompetitor = totalCompetitorScore / numMatches;
             String sql = "UPDATE tbl_user SET score=?,win=?,averageTimeWin=?,numMatches=?,averageCompetitor=?,totalWinTime=?,totalCompetitorScore=? WHERE userName=?";
             PreparedStatement ps = this.con.prepareStatement(sql);
-            ps.setFloat(1,score);
+            ps.setFloat(1, score);
             ps.setInt(2, numWin);
             ps.setFloat(3, averageTimeWin);
             ps.setInt(4, numMatches);
-            ps.setFloat(5,averageCompetitor);
+            ps.setFloat(5, averageCompetitor);
             ps.setInt(6, totalWinTime);
             ps.setFloat(7, totalCompetitorScore);
             ps.setString(8, user.getUser().getUserName());
@@ -203,89 +229,108 @@ public class ThreadServerListen extends Thread {
             Logger.getLogger(ThreadServerListen.class.getName()).log(Level.SEVERE, null, ex);
         }
     }
-    public int getTotalWinTime(User user){
+
+    public int getTotalWinTime(User user) {
         int ans = 0;
         try {
             String sql = "select totalWinTime from tbl_user where userName=?";
-            PreparedStatement ps  = this.con.prepareStatement(sql);
+            PreparedStatement ps = this.con.prepareStatement(sql);
             ps.setString(1, user.getUserName());
             ResultSet rs = ps.executeQuery();
-            if(rs.next()) ans = rs.getInt("totalWinTime");
+            if (rs.next()) {
+                ans = rs.getInt("totalWinTime");
+            }
         } catch (SQLException ex) {
             Logger.getLogger(ThreadServerListen.class.getName()).log(Level.SEVERE, null, ex);
         }
         return ans;
     }
-    public float getTotalCompetitorScore(User user){
+
+    public float getTotalCompetitorScore(User user) {
         float ans = 0;
         try {
             String sql = "select totalCompetitorScore from tbl_user where userName=?";
-            PreparedStatement ps  = this.con.prepareStatement(sql);
+            PreparedStatement ps = this.con.prepareStatement(sql);
             ps.setString(1, user.getUserName());
             ResultSet rs = ps.executeQuery();
-            if(rs.next()) ans = rs.getFloat("totalCompetitorScore");
-            
+            if (rs.next()) {
+                ans = rs.getFloat("totalCompetitorScore");
+            }
+
         } catch (SQLException ex) {
             Logger.getLogger(ThreadServerListen.class.getName()).log(Level.SEVERE, null, ex);
         }
         return ans;
     }
-    public int getNumWin(User user){
+
+    public int getNumWin(User user) {
         int ans = 0;
         try {
             String sql = "select win from tbl_user where userName=?";
-            PreparedStatement ps  = this.con.prepareStatement(sql);
+            PreparedStatement ps = this.con.prepareStatement(sql);
             ps.setString(1, user.getUserName());
             ResultSet rs = ps.executeQuery();
-            if(rs.next()) ans = rs.getInt("win");
-            
+            if (rs.next()) {
+                ans = rs.getInt("win");
+            }
+
         } catch (SQLException ex) {
             Logger.getLogger(ThreadServerListen.class.getName()).log(Level.SEVERE, null, ex);
         }
         return ans;
     }
-    public int getNumMatches(User user){
+
+    public int getNumMatches(User user) {
         int ans = 0;
         try {
             String sql = "select numMatches from tbl_user where userName=?";
-            PreparedStatement ps  = this.con.prepareStatement(sql);
+            PreparedStatement ps = this.con.prepareStatement(sql);
             ps.setString(1, user.getUserName());
             ResultSet rs = ps.executeQuery();
-            if(rs.next()) ans = rs.getInt("numMatches");
-            
+            if (rs.next()) {
+                ans = rs.getInt("numMatches");
+            }
+
         } catch (SQLException ex) {
             Logger.getLogger(ThreadServerListen.class.getName()).log(Level.SEVERE, null, ex);
         }
         return ans;
     }
-    public float getAverageTimeWin(User user){
+
+    public float getAverageTimeWin(User user) {
         float ans = 0;
         try {
             String sql = "select averageTimeWin from tbl_user where userName=?";
-            PreparedStatement ps  = this.con.prepareStatement(sql);
+            PreparedStatement ps = this.con.prepareStatement(sql);
             ps.setString(1, user.getUserName());
             ResultSet rs = ps.executeQuery();
-            if(rs.next()) ans = rs.getFloat("averageTimeWin");
-            
+            if (rs.next()) {
+                ans = rs.getFloat("averageTimeWin");
+            }
+
         } catch (SQLException ex) {
             Logger.getLogger(ThreadServerListen.class.getName()).log(Level.SEVERE, null, ex);
         }
         return ans;
     }
-    public float getAverageCompetitor(User user){
+
+    public float getAverageCompetitor(User user) {
         float ans = 0;
         try {
             String sql = "select averageCompetitor from tbl_user where userName=?";
-            PreparedStatement ps  = this.con.prepareStatement(sql);
+            PreparedStatement ps = this.con.prepareStatement(sql);
             ps.setString(1, user.getUserName());
             ResultSet rs = ps.executeQuery();
-            if(rs.next()) ans = rs.getFloat("averageCompetitor");
-            
+            if (rs.next()) {
+                ans = rs.getFloat("averageCompetitor");
+            }
+
         } catch (SQLException ex) {
             Logger.getLogger(ThreadServerListen.class.getName()).log(Level.SEVERE, null, ex);
         }
         return ans;
     }
+
     public int getNumCorrect(int[] ans, ArrayList<Question> questions) {
         int sum = 0;
         for (int i = 0; i < ans.length; i++) {
@@ -295,16 +340,19 @@ public class ThreadServerListen extends Thread {
         }
         return sum;
     }
+
     public void createSession(String ip) {
         Info user1 = listPlayerSocket.get(ip);
         addSession(user1, this.info);
         PlaySession playS = new PlaySession(user1, this.info, this.con);
         playS.start();
     }
+
     public void addSession(Info i1, Info i2) {
         // thêm phiên làm bài của 2 user, = false => chưa nộp bài
         listPlaySession.add(new CouplePlayer(i1, i2));
     }
+
     //trả lại thông báo từ chối cho người mời
     public void sendRefuse(Request res) {
         try {
@@ -316,6 +364,7 @@ public class ThreadServerListen extends Thread {
             Logger.getLogger(ThreadServerListen.class.getName()).log(Level.SEVERE, null, ex);
         }
     }
+
     //Chuyển l ờithách đấu của user1 gửi đến User2
     public void forwardInvite(Request res) {
         try {

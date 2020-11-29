@@ -15,31 +15,35 @@ import java.util.logging.Logger;
  *
  * @author cuongnv
  */
-public class updatePlayerOnline extends Thread{
+public class updatePlayerOnline extends Thread {
+
     public Map<String, Info> listPlayer;
-    public updatePlayerOnline(Map<String, Info> lp){
-        this. listPlayer = lp;
+
+    public updatePlayerOnline(Map<String, Info> lp) {
+        this.listPlayer = lp;
     }
+
     @Override
-    public void run(){
-            while(true){
-                try {
-                    
-                    sleep(2000);
-                    updateOnline();
-                } catch (InterruptedException ex) {
-                    Logger.getLogger(Controller.class.getName()).log(Level.SEVERE, null, ex);
-                }
+    public void run() {
+        while (true) {
+            try {
+
+                sleep(2000);
+                updateOnline();
+            } catch (InterruptedException ex) {
+                Logger.getLogger(Controller.class.getName()).log(Level.SEVERE, null, ex);
             }
         }
-        public synchronized  void updateOnline(){
-            for(Map.Entry<String, Info> p: listPlayer.entrySet()){
-                if(p.getValue().getSocket().isClosed()){
-                    listPlayer.remove(p.getKey());
-                    break;
-                }
+    }
+
+    public synchronized void updateOnline() {
+        for (Map.Entry<String, Info> p : listPlayer.entrySet()) {
+            if (p.getValue().getSocket().isClosed()) {
+                listPlayer.remove(p.getKey());
+                break;
             }
-            System.out.println(listPlayer.size());
         }
-    
+        System.out.println(listPlayer.size());
+    }
+
 }
