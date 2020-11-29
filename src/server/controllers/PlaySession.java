@@ -18,9 +18,11 @@ import java.util.logging.Logger;
  * @author cuongnv
  */
 public class PlaySession extends Thread{
+    public boolean is_createQuestion = false;
     private Info info1;
     private Info info2;
     private Connection con;
+    private ArrayList<Question> questions;
     public PlaySession(Info i1, Info i2, Connection con){
         this.info1 = i1;
         this.info2 = i2;
@@ -67,10 +69,15 @@ public class PlaySession extends Thread{
             
             info1.oos.writeObject(new Request("sendListQuestion",(Object)questions,(Object)info2.getUser()));
             info2.oos.writeObject(new Request("sendListQuestion",(Object)questions,(Object)info1.getUser()));
+            this.is_createQuestion = true;
+            this.questions = questions;
         } catch (SQLException ex) {
             Logger.getLogger(PlaySession.class.getName()).log(Level.SEVERE, null, ex);
         } catch (IOException ex) {
             Logger.getLogger(PlaySession.class.getName()).log(Level.SEVERE, null, ex);
         }
+    }
+    public ArrayList<Question> getQuestions(){
+        return this.questions;
     }
 }

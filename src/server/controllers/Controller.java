@@ -33,10 +33,12 @@ public class Controller {
     private int port = 8888;
     private ServerSocket myServer;
     private Socket clientSocket;
+    
     private Connection con;
     private Map<String,Info> listPlayerSocket;//status 0=login fail, 1= waiting ,2= playing
     private Map<String, Pair<User,Integer>> players;
     private ArrayList<User> ranks;
+    private ArrayList<CouplePlayer> listPlaySession = new ArrayList<>(); // Lưu trạng thái nộp bài của mỗi cặp đấu 
     public Controller(){
         con = getConnection("localhost", "btl", "root", "");
         players = new HashMap<>();
@@ -45,6 +47,7 @@ public class Controller {
         updatePlayerOnline threadUpdate = new updatePlayerOnline(this.listPlayerSocket);
         threadUpdate.setDaemon(true);
         threadUpdate.start();
+       
         while(true){
             try {
                 Socket socket = myServer.accept();
@@ -62,7 +65,7 @@ public class Controller {
                     info.oos = new ObjectOutputStream(socket.getOutputStream());
                     //System.out.println(info.getUser().getUserName());
                 }
-                new ThreadServerListen(info, con, listPlayerSocket, players).start();
+                new ThreadServerListen(info, con, listPlayerSocket, players, listPlaySession).start();
             } catch (IOException ex) {
                 Logger.getLogger(Controller.class.getName()).log(Level.SEVERE, null, ex);
             }
