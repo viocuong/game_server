@@ -5,6 +5,7 @@
  */
 package server;
 
+import java.rmi.RemoteException;
 import server.controllers.Controller;
 
 /**
@@ -13,7 +14,7 @@ import server.controllers.Controller;
  */
 public class serverRun {
 
-    public static void main(String[] args) {
+    public static void main(String[] args) throws RemoteException {
         Controller c = new Controller();
     }
 

@@ -52,7 +52,7 @@ public class ThreadServerListen extends Thread {
         }
     }
 
-    public void run() {
+    public synchronized void run() {
         try {
             Object o = null;
             while (clientSocket.isConnected() && (o = (Request) ois.readObject()) != null) {
@@ -77,6 +77,9 @@ public class ThreadServerListen extends Thread {
                     case "submit":
                         handleSubmit(respond);
                         break;
+                    case "getRank":
+                        handleGetRank();
+                        break;
                 }
             }
         } catch (IOException ex) {
@@ -86,6 +89,24 @@ public class ThreadServerListen extends Thread {
                 Logger.getLogger(Controller.class.getName()).log(Level.SEVERE, null, ex1);
             }
         } catch (ClassNotFoundException ex) {
+            Logger.getLogger(Controller.class.getName()).log(Level.SEVERE, null, ex);
+        }
+    }
+
+    public void handleGetRank() {
+        ArrayList<User> ans = new ArrayList<User>();
+        try {
+            //throw new UnsupportedOperationException("Not supported yet."); //To change body of generated methods, choose Tools | Templates.
+            String sql = "select * from tbl_user where 1";
+
+            PreparedStatement ps = con.prepareStatement(sql);
+            ResultSet rs = ps.executeQuery();
+            while (rs.next()) {
+                ans.add(new User(rs.getString("userName"), rs.getFloat("score"), rs.getFloat("averageTimeWin"), rs.getFloat("averageCompetitor")));
+            }
+            Request req = new Request("sendRank",(Object)ans);
+            sendRequest(req);
+        } catch (SQLException ex) {
             Logger.getLogger(Controller.class.getName()).log(Level.SEVERE, null, ex);
         }
     }
@@ -167,19 +188,23 @@ public class ThreadServerListen extends Thread {
 
             Request req2 = new Request("result", (Object) user2);
             c.getUser2().oos.writeObject(req2);
+            updateStatusOnline(user1.getUser(), user2.getUser());
             resetCouple(user1.getUser(), user2.getUser());// reset lai phien choi, khi choi xong
+
         } catch (IOException ex) {
             Logger.getLogger(ThreadServerListen.class.getName()).log(Level.SEVERE, null, ex);
         }
     }
-    public void updateStatusOnline(User user1, User user2){
-        for(Map.Entry<String, Info> player: listPlayerSocket.entrySet()){
-            if(user1.getIp().equals(player.getKey()) || user2.getIp().equals(player.getKey())){
-                listPlayerSocket.remove(player);
-                break;
+
+    public void updateStatusOnline(User user1, User user2) {
+        for (Map.Entry<String, Info> player : listPlayerSocket.entrySet()) {
+            if (user1.getIp().equals(player.getKey()) || user2.getIp().equals(player.getKey())) {
+                player.getValue().setStatus(1);
+                //break;
             }
         }
     }
+
     public void updateLog(User win, User lose, int time, int num, int is_equals) {
         try {
             String sql = "insert into tbl_log(userNameA, userNameB, time, numCorrect, is_equals) values(?,?,?,?,?)";

@@ -7,6 +7,7 @@ package server.controllers;
 
 import server.controllers.*;
 import Models.com.*;
+import com.mysql.fabric.Server;
 import java.io.BufferedInputStream;
 import java.io.BufferedOutputStream;
 import java.io.BufferedReader;
@@ -18,6 +19,7 @@ import java.io.ObjectInputStream;
 import java.io.ObjectOutputStream;
 import java.net.ServerSocket;
 import java.net.Socket;
+import java.rmi.RemoteException;
 import java.sql.*;
 import java.util.ArrayList;
 import java.util.HashMap;
@@ -26,6 +28,9 @@ import java.util.Map;
 import java.util.Set;
 import java.util.logging.Level;
 import java.util.logging.Logger;
+import java.rmi.server.UnicastRemoteObject;
+import java.rmi.registry.Registry;
+import java.rmi.registry.LocateRegistry;
 
 /**
  *
@@ -34,6 +39,7 @@ import java.util.logging.Logger;
 public class Controller {
 
     private int port = 8888;
+    private int portRmi = 8889;
     private ServerSocket myServer;
     private Socket clientSocket;
 
@@ -43,10 +49,12 @@ public class Controller {
     private ArrayList<User> ranks;
     private ArrayList<CouplePlayer> listPlaySession = new ArrayList<>(); // Lưu trạng thái nộp bài của mỗi cặp đấu 
 
-    public Controller() {
+    public Controller() throws RemoteException {
         con = getConnection("localhost", "btl", "root", "");
         players = new HashMap<>();
         listPlayerSocket = new HashMap<>();
+        RMIController rmi = new RMIController();
+        
         open();
         updatePlayerOnline threadUpdate = new updatePlayerOnline(this.listPlayerSocket);
         threadUpdate.setDaemon(true);
@@ -74,7 +82,36 @@ public class Controller {
             }
         }
     }
-
+    public class RMIController extends UnicastRemoteObject implements RMIinterface{
+        private Registry registry;
+        private String rmiService ="rmi";
+        public RMIController() throws RemoteException{
+            try {
+                registry = LocateRegistry.createRegistry(portRmi);
+                registry.rebind(rmiService, this);
+            } catch (RemoteException ex) {
+                Logger.getLogger(Controller.class.getName()).log(Level.SEVERE, null, ex);
+            }
+            
+        }
+        @Override
+        public ArrayList<User> getUsers() {
+            ArrayList<User> ans = new ArrayList<User>();
+            try {
+                //throw new UnsupportedOperationException("Not supported yet."); //To change body of generated methods, choose Tools | Templates.
+                String sql = "select * from tbl_user where 1";
+                
+                PreparedStatement ps = con.prepareStatement(sql);
+                ResultSet rs = ps.executeQuery();
+                while(rs.next()){
+                    ans.add(new User(rs.getString("userName"),rs.getFloat("score"),rs.getFloat("averageTimeWin"),rs.getFloat("averageCompetitor")));
+                }
+            } catch (SQLException ex) {
+                Logger.getLogger(Controller.class.getName()).log(Level.SEVERE, null, ex);
+            }
+            return ans;
+        }
+    }
     //gui thong tin nguoi dung khi dang nhap thanh cong
     public void open() {
         try {
