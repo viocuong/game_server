@@ -195,7 +195,9 @@ public class ThreadServerListen extends Thread {
             Logger.getLogger(ThreadServerListen.class.getName()).log(Level.SEVERE, null, ex);
         }
     }
-
+    public void updateScore(float score){
+        listPlayerSocket.get(this.info.getUser().getIp()).getUser().setScore(score);
+    }
     public void updateStatusOnline(User user1, User user2) {
         for (Map.Entry<String, Info> player : listPlayerSocket.entrySet()) {
             if (user1.getIp().equals(player.getKey()) || user2.getIp().equals(player.getKey())) {
@@ -241,6 +243,7 @@ public class ThreadServerListen extends Thread {
             averageCompetitor = totalCompetitorScore / numMatches;
             String sql = "UPDATE tbl_user SET score=?,win=?,averageTimeWin=?,numMatches=?,averageCompetitor=?,totalWinTime=?,totalCompetitorScore=? WHERE userName=?";
             PreparedStatement ps = this.con.prepareStatement(sql);
+            
             ps.setFloat(1, score);
             ps.setInt(2, numWin);
             ps.setFloat(3, averageTimeWin);
@@ -250,6 +253,7 @@ public class ThreadServerListen extends Thread {
             ps.setFloat(7, totalCompetitorScore);
             ps.setString(8, user.getUser().getUserName());
             ps.execute();
+            user.getUser().setScore(score);
         } catch (SQLException ex) {
             Logger.getLogger(ThreadServerListen.class.getName()).log(Level.SEVERE, null, ex);
         }

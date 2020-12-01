@@ -128,7 +128,6 @@ public class Controller {
             Logger.getLogger(Controller.class.getName()).log(Level.SEVERE, null, ex);
         }
     }
-
     public Connection getConnection(String host, String dbName, String username, String password) {
         Connection res = null;
         try {

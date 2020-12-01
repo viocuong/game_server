@@ -73,7 +73,6 @@ public class PlaySession extends Thread {
                 questions.add(q);
                 //questions.add(new Question(rs.getString(""), listans, NORM_PRIORITY))
             }
-
             info1.oos.writeObject(new Request("sendListQuestion", (Object) questions, (Object) info2.getUser()));
             info2.oos.writeObject(new Request("sendListQuestion", (Object) questions, (Object) info1.getUser()));
             this.is_createQuestion = true;
